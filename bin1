@@ -1,0 +1,649 @@
+Assignment 1:
+1.	AddServerIntf.java 
+import java.rmi.*; 
+public interface AddServerIntf extends Remote { 
+  double add(double d1, double d2) 
+  throws RemoteException; 
+}
+
+2.	AddServerImpl.java
+import java.rmi.*; 
+import java.rmi.server.*; 
+public class AddServerImpl extends UnicastRemoteObject implements AddServerIntf { 
+  public AddServerImpl() 
+  throws RemoteException { } 
+  public double add(double d1, double d2) 
+  throws RemoteException { return d1 + d2; } 
+}
+
+3.	AddServer.java
+import java.net.*; 
+import java.rmi.*; 
+public class AddServer { 
+   public static void main(String args[]) { 
+      try 
+      { 
+        AddServerImpl addServerImpl = new AddServerImpl(); 
+        Naming.rebind("AddServer", addServerImpl); 
+      } 
+      catch(Exception e) { 
+        System.out.println("Exception: " + e); 
+      }
+   }
+}
+
+4.	AddClient.java
+import java.rmi.*; 
+public class AddClient { 
+  public static void main(String args[]) { 
+    try { 
+      String addServerURL = "rmi://" + args[0] + "/AddServer"; 
+      AddServerIntf addServerIntf = (AddServerIntf)Naming.lookup(addServerURL); 
+      System.out.println("The first number is: " + args[1]); 
+      double d1 = Double.valueOf(args[1]).doubleValue(); 
+      System.out.println("The second number is: " + args[2]); 
+      double d2 = Double.valueOf(args[2]).doubleValue(); 
+      System.out.println("The sum is: " + addServerIntf.add(d1, d2)); 
+    } catch(Exception e) { 
+      System.out.println("Exception: " + e); 
+    } 
+  } 
+}
+Run cammand
+javac *.java
+rmic AddServerImpl
+rmiregistry
+java AddServer
+
+
+
+Assignment 2.
+
+1.	ReverseModule.idl
+module ReverseModule { 
+    interface Reverse { 
+          string reverse_string(in string str); 
+     }; 
+};
+
+2.	ReverseImpl.java
+import ReverseModule.ReversePOA; 
+import java.lang.String; 
+class ReverseImpl extends ReversePOA { 
+  ReverseImpl() { 
+    super(); 
+    System.out.println("Reverse Object Created"); 
+  }
+  public String reverse_string(String name) { 
+  StringBuffer str=new StringBuffer(name); 
+  str.reverse(); 
+  return (("Server Send "+str)); 
+  }
+}
+
+3.	ReverseServer.java
+import ReverseModule.Reverse; 
+import org.omg.CosNaming.*; 
+import org.omg.CosNaming.NamingContextPackage.*; 
+import org.omg.CORBA.*; 
+import org.omg.PortableServer.*; 
+class ReverseServer { 
+  public static void main(String[] args) { 
+    try { 
+        // initialize the ORB
+         org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init(args,null); 
+        // initialize the BOA/POA 
+        POA rootPOA = POAHelper.narrow(orb.resolve_initial_references("RootPOA")); 
+        rootPOA.the_POAManager().activate(); 
+        // creating the calculator object 
+        ReverseImpl rvr = new ReverseImpl(); 
+        // get the object reference from the servant class 
+        org.omg.CORBA.Object ref = rootPOA.servant_to_reference(rvr); 
+        System.out.println("Step1"); 
+        Reverse h_ref = ReverseModule.ReverseHelper.narrow(ref); 
+        System.out.println("Step2"); 
+        org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService"); 
+        System.out.println("Step3"); 
+        NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef); 
+        System.out.println("Step4"); 
+        String name = "Reverse"; 
+        NameComponent path[] = ncRef.to_name(name); 
+        ncRef.rebind(path,h_ref); 
+        System.out.println("Reverse Server reading and waiting...."); 
+        orb.run(); 
+     } catch(Exception e) { 
+        e.printStackTrace(); 
+     } 
+   } 
+}
+
+
+4.	ReverseClient.java
+import ReverseModule.*; 
+import org.omg.CosNaming.*; 
+import org.omg.CosNaming.NamingContextPackage.*; 
+import org.omg.CORBA.*; import java.io.*; 
+class ReverseClient { 
+    public static void main(String args[]) { 
+      Reverse ReverseImpl=null; 
+      try { 
+          // initialize the ORB 
+          org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init(args,null); 
+          org.omg.CORBA.Object objRef = orb.resolve_initial_references("NameService"); 
+          NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef); 
+          String name = "Reverse"; 
+          ReverseImpl = ReverseHelper.narrow(ncRef.resolve_str(name)); 
+          System.out.println("Enter String="); 
+          BufferedReader br = new BufferedReader(new InputStreamReader(System.in)); 
+          String str= br.readLine(); 
+          String tempStr= ReverseImpl.reverse_string(str); 
+          System.out.println(tempStr); 
+        } catch(Exception e) { 
+          e.printStackTrace(); 
+        } 
+    } 
+}
+
+
+Assignment 2 run steps:
+    String Reverse using corba , idl and java implementation : 
+2. Run the IDL-to-Java compiler idlj, on the IDL file to create stubs and skeletons. 
+This step assumes that you have included the path to the java/bin directory in your path.
+  idlj -fall  ReverseModule.idl
+The idlj compiler generates a number of files.
+3. Compile the .java files, including the stubs and skeletons 
+(which are in the directory newly created directory). 
+This step assumes the java/bin directory is included in your path.
+   javac *.java  ReverseModule/*.java
+4. Start orbd. To start orbd from a UNIX command shell, enter :
+  	orbd -ORBInitialPort 1050&
+5. Start the server. To start the  server from a UNIX command shell, enter :
+  java ReverseServer -ORBInitialPort 1050& -ORBInitialHost localhost&
+6. Run the client application :
+  java ReverseClient -ORBInitialPort 1050 -ORBInitialHost localhost
+  
+  
+
+Assignment 3:
+import mpi.MPI; 
+public class ScatterGather { 
+    public static void main(String args[]) { 
+      //Initialize MPI execution environment MPI.Init(args); 
+      //Get the id of the process 
+      int rank = MPI.COMM_WORLD.Rank(); 
+      //total number of processes is stored in size 
+      int size = MPI.COMM_WORLD.Size(); 
+      int root=0; 
+      //array which will be filled with data by root process 
+      int sendbuf[]=null; 
+      sendbuf= new int[size]; 
+      //creates data to be scattered 
+      if(rank==root){ 
+          sendbuf[0] = 10; 
+          sendbuf[1] = 20; sendbuf[2] = 30; 
+          sendbuf[3] = 40; 
+          //print current process number 
+          System.out.print("Processor "+rank+" has data: "); 
+
+          for(int i = 0; i < size; i++){ 
+            System.out.print(sendbuf[i]+" "); 
+          } 
+          System.out.println(); 
+      } 
+      //collect data in recvbuf 
+      int recvbuf[] = new int[1]; 
+      //following are the args of Scatter method 
+      //send, offset, chunk_count, chunk_data_type, recv, offset, chunk_count, chunk_data_type, root_process_id 
+      MPI.COMM_WORLD.Scatter(sendbuf, 0, 1, MPI.INT, recvbuf, 0, 1, MPI.INT, root); 
+      System.out.println("Processor "+rank+" has data: "+recvbuf[0]); 
+      System.out.println("Processor "+rank+" is doubling the data"); 
+      recvbuf[0]=recvbuf[0]*2; 
+      //following are the args of Gather method 
+      //Object sendbuf, int sendoffset, int sendcount, Datatype sendtype, 
+      //Object recvbuf, int recvoffset, int recvcount, Datatype recvtype, //int root) 
+      MPI.COMM_WORLD.Gather(recvbuf, 0, 1, MPI.INT, sendbuf, 0, 1, MPI.INT, root); 
+
+      //display the gathered 
+      result if(rank==root){ System.out.println("Process 0 has data: "); 
+
+      for(int i=0;i<4;i++){
+        System.out.print(sendbuf[i]+ " "); 
+       } 
+    } 
+    //Terminate MPI execution environment 
+    MPI.Finalize(); 
+  } 
+}
+
+Assignment 3 run steps: 
+1. Set MPJ_HOME environment variables:
+       export MPJ_HOME= --path to mpj directory --
+2. Write your MPJ Express program (ScatterGather.java) and save it.
+3. Compile :    javac -cp $MPJ_HOME/lib/mpj.jar ScatterGather.java
+4. Execute  :  $MPJ_HOME/bin/mpjrun.sh -np 4 ScatterGather
+
+
+Assignment 4:
+# Python program imitating a client process
+
+from timeit import default_timer as timer
+from dateutil import parser
+import threading
+import datetime
+import socket
+import time
+
+# client thread function used to send time at client side
+def startSendingTime(slave_client):
+	while True:
+		# provide server with clock time at the client
+		slave_client.send(str(datetime.datetime.now()).encode())
+		print("Recent time sent successfully",end = "\n\n")
+		time.sleep(5)
+
+
+# client thread function used to receive synchronized time
+def startReceivingTime(slave_client):
+	while True:
+		# receive data from the server
+		Synchronized_time = parser.parse(slave_client.recv(1024).decode())
+		print("Synchronized time at the client is: " + \str(Synchronized_time), end = "\n\n")
+
+
+# function used to Synchronize client process time
+def initiateSlaveClient(port = 8080):
+	slave_client = socket.socket()		
+	
+	# connect to the clock server on local computer
+	slave_client.connect(('127.0.0.1', port))
+
+	# start sending time to server
+	print("Starting to receive time from server\n")
+	send_time_thread = threading.Thread(target = startSendingTime, args = (slave_client, ))
+	send_time_thread.start()
+
+	# start receiving synchronized from server
+	print("Starting to receiving " + \"synchronized time from server\n")
+	receive_time_thread = threading.Thread(target = startReceivingTime, args = (slave_client, ))
+	receive_time_thread.start()
+
+
+# Driver function
+if __name__ == '__main__':
+
+	# initialize the Slave / Client
+	initiateSlaveClient(port = 8080)
+
+=Server=
+# Python program imitating a clock server
+
+from functools import reduce
+from dateutil import parser
+import threading
+import datetime
+import socket
+import time
+
+# datastructure used to store client address and clock data
+client_data = {}
+
+''' nested thread function used to receive
+	clock time from a connected client '''
+def startReceivingClockTime(connector, address):
+	while True:
+		# receive clock time
+		clock_time_string = connector.recv(1024).decode()
+		clock_time = parser.parse(clock_time_string)
+		clock_time_diff = datetime.datetime.now() - \clock_time
+
+		client_data[address] = {
+					"clock_time"	 : clock_time,
+					"time_difference" : clock_time_diff,
+					"connector"	 : connector
+					}
+
+		print("Client Data updated with: "+ str(address), end = "\n\n")
+		time.sleep(5)
+
+
+''' master thread function used to open portal for
+	accepting clients over given port '''
+def startConnecting(master_server):
+	# fetch clock time at slaves / clients
+	while True:
+		# accepting a client / slave clock client
+		master_slave_connector, addr = master_server.accept()
+		slave_address = str(addr[0]) + ":" + str(addr[1])
+
+		print(slave_address + " got connected successfully")
+
+		current_thread = threading.Thread(target = startReceivingClockTime,
+						args = (master_slave_connector, slave_address, ))
+		current_thread.start()
+
+
+# subroutine function used to fetch average clock difference
+def getAverageClockDiff():
+	current_client_data = client_data.copy()
+	time_difference_list = list(client['time_difference']
+	for client_addr, client in client_data.items())
+	sum_of_clock_difference = sum(time_difference_list, datetime.timedelta(0, 0))
+	average_clock_difference = sum_of_clock_difference / len(client_data)
+	return average_clock_difference
+
+
+''' master sync thread function used to generate
+	cycles of clock synchronization in the network '''
+def synchronizeAllClocks():
+	while True:
+		print("New synchronization cycle started.")
+		print("Number of clients to be synchronized: " + str(len(client_data)))
+
+		if len(client_data) > 0:
+
+			average_clock_difference = getAverageClockDiff()
+
+			for client_addr, client in client_data.items():
+				try:
+					synchronized_time = datetime.datetime.now() + average_clock_difference
+					client['connector'].send(str(synchronized_time).encode())
+
+				except Exception as e:
+					print("Something went wrong while " + \
+						"sending synchronized time " + \
+						"through " + str(client_addr))
+
+		else :
+			print("No client data. Synchronization not applicable.")
+
+		print("\n\n")
+
+		time.sleep(5)
+
+
+# function used to initiate the Clock Server / Master Node
+def initiateClockServer(port = 8080):
+
+	master_server = socket.socket()
+	master_server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+	print("Socket at master node created successfully\n")
+	
+	master_server.bind(('', port))
+
+	# Start listening to requests
+	master_server.listen(10)
+	print("Clock server started...\n")
+
+	# start making connections
+	print("Starting to make connections...\n")
+	master_thread = threading.Thread(target = startConnecting, args = (master_server, ))
+	master_thread.start()
+
+	# start synchronization
+	print("Starting synchronization parallelly...\n")
+	sync_thread = threading.Thread(target = synchronizeAllClocks, args = ())
+	sync_thread.start()
+
+
+# Driver function
+if __name__ == '__main__':
+
+	# Trigger the Clock Server
+	initiateClockServer(port = 8080)
+
+Assignment 5
+import java.io.*;
+import java.util.*;
+class tokenring {
+    public static void main(String args[]) throws Throwable {
+        Scanner scan = new Scanner(System.in);
+        System.out.println("Enter the num of nodes:");
+        int n = scan.nextInt();
+        int m = n - 1;
+        // Decides the number of nodes forming the ring
+        int token = 0;
+        int ch = 0, flag = 0;
+        for (int i = 0; i < n; i++) {
+            System.out.print(" " + i);
+        }
+        System.out.println(" " + 0);
+        do{
+            System.out.println("Enter sender:");
+            int s = scan.nextInt();
+            System.out.println("Enter receiver:");
+            int r = scan.nextInt();
+            System.out.println("Enter Data:");
+            int a;
+            a = scan.nextInt();       
+            System.out.print("Token passing:");
+            for (int i = token, j = token; (i % n) != s; i++, j = (j + 1) % n) {
+                System.out.print(" " + j + "->");
+            }
+            System.out.println(" " + s);
+            System.out.println("Sender " + s + " sending data: " + a);
+            for (int i = s + 1; i != r; i = (i + 1) % n) {
+                System.out.println("data  " + a + " forwarded by " + i);
+            }
+            System.out.println("Receiver " + r + " received data: " + a +"\n");
+            token = s;
+            do{	
+                try {
+                    if( flag == 1)
+			System.out.print("Invalid Input!!...");
+                    System.out.print("Do you want to send again?? enter 1 for Yes and 0 for No : ");
+                    ch = scan.nextInt();
+                    if( ch != 1 && ch != 0 )
+			flag = 1;
+                    else
+			flag = 0;                    
+                } catch (InputMismatchException e){
+                    System.out.println("Invalid Input");
+                }
+            }while( ch != 1 && ch != 0 ); 
+        }while( ch == 1 );            
+    }
+}
+
+Assignment 6: Ring.java
+import java.util.Scanner;
+public class Ring {
+	public static void main(String[] args) {
+// TODO Auto-generated method stub
+		int temp, i, j;
+		char str[] = new char[10];
+		Rr proc[] = new Rr[10];
+// object initialisation
+		for (i = 0; i < proc.length; i++)
+			proc[i] = new Rr();
+// scanner used for getting input from console
+		Scanner in = new Scanner(System.in);
+		System.out.println("Enter the number of process : ");
+		int num = in.nextInt();
+// getting input from users
+		for (i = 0; i < num; i++) {
+			proc[i].index = i;
+			System.out.println("Enter the id of process : ");
+			proc[i].id = in.nextInt();
+			proc[i].state = "active";
+			proc[i].f = 0;
+		}
+// sorting the processes from on the basis of id
+		for (i = 0; i < num - 1; i++) {
+			for (j = 0; j < num - 1; j++) {
+				if (proc[j].id > proc[j + 1].id) {
+					temp = proc[j].id;
+					proc[j].id = proc[j + 1].id;
+					proc[j + 1].id = temp;
+				}
+			}
+		}
+		for (i = 0; i < num; i++) {
+			System.out.print("  [" + i + "]" + " " + proc[i].id);
+		}
+int init;
+		int ch;
+		int temp1;
+		int temp2;
+		int ch1;
+		int arr[] = new int[10];
+		proc[num - 1].state = "inactive";
+		System.out.println("\n process " + proc[num - 1].id + "select as co-ordinator");
+		while (true) {
+			System.out.println("\n 1.election 2.quit ");
+			ch = in.nextInt();
+			for (i = 0; i < num; i++) {
+				proc[i].f = 0;
+			}
+			switch (ch) {
+			case 1:
+				System.out.println("\n Enter the Process number who initialsied election : ");
+				init = in.nextInt();
+				temp2 = init;
+				temp1 = init + 1;
+				i = 0;
+				while (temp2 != temp1) {
+					if ("active".equals(proc[temp1].state) && proc[temp1].f == 0) {
+
+						System.out.println("\nProcess " + proc[init].id + " send message to " + proc[temp1].id);
+						proc[temp1].f = 1;
+						init = temp1;
+						arr[i] = proc[temp1].id;
+						i++;
+					}
+					if (temp1 == num) {
+						temp1 = 0;
+					} else {
+						temp1++;
+					}
+				}
+				System.out.println("\nProcess " + proc[init].id + " send message to " + proc[temp1].id);
+				arr[i] = proc[temp1].id;
+				i++;
+				int max = -1;
+// finding maximum for co-ordinator selection
+				for (j = 0; j < i; j++) {
+					if (max < arr[j]) {
+						max = arr[j];
+					}
+				}
+// co-ordinator is found then printing on console
+				System.out.println("\n process " + max + "select as co-ordinator");
+				for (i = 0; i < num; i++) {
+					if (proc[i].id == max) {
+						proc[i].state = "inactive";
+					}
+				}
+				break;
+			case 2:
+            				System.out.println("Program terminated ...");
+            				return ;
+			default:
+				System.out.println("\n invalid response \n");
+				break;
+			}
+		}
+	}
+}
+class Rr {
+	public int index;   // to store the index of process
+	public int id;      // to store id/name of process
+	public int f;
+	String state;       // indiactes whether active or inactive state of node
+}
+
+Bully.java
+
+import java.io.InputStream;
+import java.io.PrintStream;
+import java.util.Scanner;
+public class Bully {
+    static boolean[] state = new boolean[5];
+    int coordinator;
+    public static void up(int up) {
+        if (state[up - 1]) {
+            System.out.println("process" + up + "is already up");
+        } else {
+            int i;
+            Bully.state[up - 1] = true;
+            System.out.println("process " + up + "held election");
+            for (i = up; i < 5; ++i) {
+                System.out.println("election message sent from process" + up + "to process" + (i + 1));
+            }
+            for (i = up + 1; i <= 5; ++i) {
+                if (!state[i - 1]) continue;
+                System.out.println("alive message send from process" + i + "to process" + up);
+                break;
+            }
+        }
+    }
+    public static void down(int down) {
+        if (!state[down - 1]) {
+            System.out.println("process " + down + "is already dowm.");
+        } else {
+            Bully.state[down - 1] = false;
+        }
+    }
+    public static void mess(int mess) {
+        if (state[mess - 1]) {
+            if (state[4]) {
+                System.out.println("0K");
+            } else if (!state[4]) {
+                int i;
+                System.out.println("process" + mess + "election");
+                for (i = mess; i < 5; ++i) {
+                    System.out.println("election send from process" + mess + "to process " + (i + 1));
+                }
+                for (i = 5; i >= mess; --i) {
+                    if (!state[i - 1]) continue;
+                    System.out.println("Coordinator message send from process" + i + "to all");
+                    break;
+                }
+            }
+        } else {
+            System.out.println("Prccess" + mess + "is down");
+        }
+    }
+    public static void main(String[] args) {
+        int choice;
+        Scanner sc = new Scanner(System.in);
+        for (int i = 0; i < 5; ++i) {
+            Bully.state[i] = true;
+        }
+        System.out.println("5 active process are:");
+        System.out.println("Process up  = p1 p2 p3 p4 p5");
+        System.out.println("Process 5 is coordinator");
+        do {
+            System.out.println(".........");
+            System.out.println("1 up a process.");
+            System.out.println("2.down a process");
+            System.out.println("3 send a message");
+            System.out.println("4.Exit");
+            choice = sc.nextInt();
+            switch (choice) {
+                case 1: {
+                    System.out.println("bring proces up");
+                    int up = sc.nextInt();
+                    if (up == 5) {
+                        System.out.println("process 5 is co-ordinator");
+                        Bully.state[4] = true;
+                        break;
+                    }
+                    Bully.up(up);
+                    break;
+                }
+                case 2: {
+                    System.out.println("bring down any process.");
+                    int down = sc.nextInt();
+                    Bully.down(down);
+                    break;
+                }
+                case 3: {
+                    System.out.println("which process will send message");
+                    int mess = sc.nextInt();
+                    Bully.mess(mess);
+                }
+            }
+        } while (choice != 4);
+    }
+}
